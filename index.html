@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070d14">
+<title>Le Among Us de Noopix — Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#070d14;--panel:#0e1822;--line:#22384a;--cyan:#4de3ff;--red:#ff4655;--green:#4ee08a;--yellow:#ffd23f;--txt:#eaf6ff;--muted:#86a0b2;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:#070d14 radial-gradient(1200px 600px at 50% -10%,#14324a 0%,transparent 60%) no-repeat;color:var(--txt);font-family:"Chakra Petch",system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.wrap{max-width:760px;margin:auto;padding:16px}
+h1,h2,h3{margin:0 0 10px;line-height:1.1}p{margin:6px 0}
+.brand{text-align:center;padding:18px 0 6px}.brand h1{font-size:clamp(28px,8vw,52px);letter-spacing:.04em}.brand .sub{color:var(--cyan);letter-spacing:.2em;font-size:13px;margin-top:6px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}
+input,textarea,button{font:inherit;color:var(--txt);border-radius:12px;border:1px solid var(--line);padding:13px 14px}
+input,textarea{background:#08121b;width:100%}textarea{min-height:160px;resize:vertical;font-size:14px;line-height:1.5}
+button{background:#152a3b;font-weight:700;cursor:pointer;touch-action:manipulation}button:disabled{opacity:.4;cursor:default}
+button.pri{background:var(--cyan);color:#04121a;border:0}button.red{background:#5a1520;border-color:#a02d3b}
+.wide{width:100%}.big{font-size:19px;padding:17px}.mt{margin-top:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 130px}
+.muted{color:var(--muted);font-size:14px}.hidden{display:none!important}.center{text-align:center}
+.code{font-size:clamp(44px,12vw,76px);font-weight:700;letter-spacing:.2em;color:var(--cyan)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:8px}
+.chip{background:#08121b;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.chip.dead{opacity:.45;text-decoration:line-through}.chip button{padding:2px 9px}
+.bar{height:18px;background:#08121b;border:1px solid var(--line);border-radius:99px;overflow:hidden}.bar>div{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .5s}
+.task{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.task:last-child{border:0}.task.done b{text-decoration:line-through;opacity:.6}.task button{flex:none}
+.log{font-size:14px;color:var(--muted);line-height:1.7}
+.toast{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));max-width:560px;margin:auto;background:#0f3a2a;border:2px solid var(--green);border-radius:14px;padding:14px;text-align:center;font-weight:700;z-index:200;transform:translateY(-220%);transition:transform .3s}
+.toast.warn{background:#4a1018;border-color:var(--red)}.toast.show{transform:none}
+.ov{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px));overflow:auto;text-align:center;background:radial-gradient(circle,#123047,#04080c 75%)}
+.ov.show{display:flex}.ov>div{width:min(640px,100%);margin:auto}
+.ov h1{font-size:clamp(34px,9vw,72px)}.icon{font-size:72px;margin-bottom:6px}
+.ov.redbg{background:radial-gradient(circle,#5a1118,#060304 75%)}.ov.greenbg{background:radial-gradient(circle,#124a33,#04080c 75%)}
+.timer{font-size:44px;font-weight:700;color:var(--yellow);margin:6px 0}
+.role-imp{color:var(--red)}.role-crew{color:var(--cyan)}
+.qr{background:#fff;padding:10px;border-radius:12px;width:max-content;margin:10px auto}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<div id="ovRole" class="ov"><div>
+  <div id="roleHidden"><div class="icon">🤫</div><h2>Ton rôle est prêt</h2><p class="muted">Cache ton écran, puis appuie pour le découvrir.</p><button class="pri big wide mt" onclick="revealRole()">RÉVÉLER MON RÔLE</button></div>
+  <div id="roleShown" class="hidden"><div id="roleIcon" class="icon"></div><h1 id="roleName"></h1><p id="roleText"></p><p id="roleMates" class="muted"></p><button class="pri big wide mt" onclick="closeOv('ovRole')">J'AI COMPRIS, ON Y VA</button></div>
+</div></div>
+
+<div id="ovMeet" class="ov redbg"><div>
+  <div class="icon">🚨</div><h1 id="mTitle"></h1><p id="mSub"></p>
+  <div id="mTimer" class="timer"></div><div id="mStatus" class="muted"></div>
+  <div id="mVotes" class="grid mt"></div><div id="mResult" class="mt"></div>
+  <button id="mForce" class="pri big wide mt hidden" onclick="forceVote()">⏹️ CLÔTURER LE VOTE</button>
+</div></div>
+
+<div id="ovPick" class="ov redbg"><div><h2 id="pkTitle"></h2><div id="pkList" class="grid mt"></div><button class="wide mt" onclick="closeOv('ovPick')">ANNULER</button></div></div>
+
+<div id="ovDead" class="ov"><div><div class="icon">💀</div><h1>TU ES MORT</h1><p>Allonge-toi discrètement là où tu es et ne dis plus un mot jusqu'à ce qu'on trouve ton corps 🤫</p><p class="muted">Ensuite, tu peux continuer les missions en fantôme.</p><button class="big wide mt" onclick="closeOv('ovDead')">OK 👻</button></div></div>
+
+<div id="ovEnd" class="ov"><div>
+  <div id="eIcon" class="icon"></div><h1 id="eTitle"></h1><p id="eReason"></p><p id="eImps" class="muted"></p>
+  <div id="eScores" class="mt" style="text-align:left"></div>
+  <div id="eHost" class="row mt hidden"><button class="pri big" onclick="startRound()">🔄 NOUVELLE MANCHE</button><button class="big" onclick="toLobby()">⚙️ RÉGLAGES</button></div>
+  <button class="wide mt" onclick="closeOv('ovEnd')">FERMER</button>
+</div></div>
+
+<main class="wrap">
+<header class="brand"><h1>LE AMONG US<br>DE NOOPIX</h1><div class="sub">MISSION CONTROL // EVG</div></header>
+
+<section id="scHome">
+  <div class="card"><h2>🚀 Rejoindre</h2>
+    <input id="inName" maxlength="16" placeholder="Ton prénom" autocomplete="given-name">
+    <div class="row mt"><input id="inCode" maxlength="4" placeholder="Code" autocapitalize="characters" style="text-transform:uppercase"><button class="pri" onclick="joinRoom()">REJOINDRE</button></div>
+    <p id="homeMsg" class="muted"></p>
+  </div>
+  <div class="card"><h2>🖥️ Créer la partie</h2><p class="muted">À ouvrir sur l'écran central (télé, PC ou tablette). Les réglages se font ensuite dans le salon.</p><button class="big wide mt" onclick="createRoom()">CRÉER UN SALON</button></div>
+  <p class="muted center">v2.0</p>
+</section>
+
+<section id="scHost" class="hidden">
+  <div class="card center"><div class="muted">CODE DU SALON</div><div id="hCode" class="code"></div><div id="hPhase" class="muted"></div></div>
+  <div id="hLobby">
+    <div class="card center"><h3>📱 Scanne pour rejoindre</h3><div id="qr" class="qr"></div><div id="joinUrl" class="muted" style="word-break:break-all"></div></div>
+    <div class="card"><h3>👥 Équipage (<span id="hCount">0</span>)</h3><div id="hLobbyPlayers" class="grid"></div></div>
+    <div class="card"><h3>⚙️ Réglages</h3>
+      <div class="row"><div><label>Imposteurs</label><input type="number" min="1" max="5" data-set="impostors"></div><div><label>Délai entre 2 kills (s)</label><input type="number" min="0" max="600" data-set="killCd"></div></div>
+      <div class="row mt"><div><label>Durée des réunions (s)</label><input type="number" min="20" max="600" data-set="meetingSec"></div><div><label>Réunions d'urgence / joueur</label><input type="number" min="0" max="5" data-set="emergencies"></div></div>
+      <div class="row mt"><div><label>Délai entre 2 sabotages (s)</label><input type="number" min="0" max="600" data-set="sabCd"></div><div></div></div>
+    </div>
+    <div class="card"><h3>🧩 Missions</h3><p class="muted">Une par ligne, au format « Nom : description ».</p><textarea id="hMissions"></textarea></div>
+    <button class="pri big wide" onclick="startRound()">🚀 LANCER LA PARTIE</button>
+  </div>
+  <div id="hGame" class="hidden">
+    <div class="card"><h3>Progression de l'équipage <span id="hPct"></span></h3><div class="bar"><div id="hBar"></div></div><div id="hTasks" class="mt"></div></div>
+    <div class="card"><h3>👥 Équipage</h3><div id="hPlayers" class="grid"></div></div>
+    <div class="row"><button class="pri big" onclick="startRound()">🔄 NOUVELLE MANCHE</button><button class="big" onclick="toLobby()">⚙️ RÉGLAGES</button></div>
+  </div>
+  <div class="card"><h3>🏆 Classement</h3><div id="hScores"></div></div>
+  <div class="card"><h3>📡 Journal de bord</h3><div id="hLog" class="log"></div></div>
+  <div id="hDev" class="card hidden" style="border-style:dashed"><h3>🛠️ Mode test</h3>
+    <div class="row"><button onclick="devBots()">🤖 +3 bots</button><button onclick="devClear()">🧹 Retirer les bots</button></div>
+    <div class="row mt"><button onclick="devKill()">☠️ Simuler un kill</button><button onclick="devTask()">✅ Valider une mission</button></div>
+    <div id="hRoles" class="muted mt"></div>
+  </div>
+  <button class="red wide mt" onclick="closeRoom()">⛔ FERMER LE SALON</button>
+</section>
+
+<section id="scPlayer" class="hidden">
+  <div class="card row" style="align-items:center"><div><div class="muted">SALON</div><b id="pCode" style="font-size:24px;color:var(--cyan)"></b></div><div style="text-align:right"><b id="pName"></b><div id="pStatus" class="muted"></div></div></div>
+  <div id="pLobby" class="card center"><div class="icon" style="font-size:56px">🛸</div><h2>En attente du décollage…</h2><p class="muted">La console va lancer la partie.</p><div id="pLobbyPlayers" class="grid mt"></div></div>
+  <div id="pGame" class="hidden">
+    <div class="card"><h3>Progression <span id="pPct"></span></h3><div class="bar"><div id="pBar"></div></div></div>
+    <div class="card"><h2>📋 Missions</h2><p class="muted">Réalise la mission en vrai, puis valide-la ici.</p><div id="pTasks"></div></div>
+    <button id="btnReport" class="red big wide" onclick="report()">💀 J'AI TROUVÉ UN CORPS</button>
+    <button id="btnEmergency" class="red big wide mt" onclick="emergency()">🚨 RÉUNION D'URGENCE</button>
+    <button class="big wide mt" onclick="toggleSecret()">🔒 MON RÔLE (cache ton écran)</button>
+    <div id="pSecret" class="card hidden"></div>
+  </div>
+  <button class="wide mt" onclick="leave()">↩️ Quitter</button>
+</section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+const db=getDatabase(initializeApp({apiKey:"AIzaSyAyJ2EBHU9bB8XJGIUQE15cAoflIWXjT2g",authDomain:"among-us-evg-bc433.firebaseapp.com",databaseURL:"https://among-us-evg-bc433-default-rtdb.europe-west1.firebasedatabase.app",projectId:"among-us-evg-bc433",storageBucket:"among-us-evg-bc433.firebasestorage.app",messagingSenderId:"643537336835",appId:"1:643537336835:web:7ba199528421cdb6cc2c36"}));
+
+const DEFAULT_MISSIONS=[
+ {name:"Pyramide de gobelets",desc:"Construis correctement la pyramide de gobelets."},
+ {name:"Électricité",desc:"Fais passer le câble dans le labyrinthe en relief, du point A au point B."},
+ {name:"O2",desc:"Gonfle les 6 ballons aux bonnes tailles pour qu'ils correspondent aux 6 emplacements."},
+ {name:"MedBay / Infirmerie",desc:"Réussis l'épreuve du Docteur Maboul."},
+ {name:"Course de l'œuf",desc:"Fais le tour complet du terrain avec une cuillère et un œuf, sans le faire tomber."}
+];
+const DEFAULT_SETTINGS={impostors:1,killCd:45,sabCd:60,meetingSec:90,emergencies:1};
+
+// ---------- utilitaires ----------
+const $=q=>document.querySelector(q);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const rid=()=>Math.random().toString(36).slice(2,10);
+const DEV=new URLSearchParams(location.search).has("dev");
+let offset=0;onValue(ref(db,".info/serverTimeOffset"),s=>offset=s.val()||0);
+const now=()=>Date.now()+offset;
+const ls={get:(k,d=null)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}},del:k=>{try{localStorage.removeItem(k)}catch{}}};
+let myId=ls.get("noopix_id");if(!myId){myId=rid();ls.set("noopix_id",myId)}
+
+let code="",isHost=false,S=null,unsub=null,fakeDone={},secretTimer=null,hostBusy=false,endSeen=0,pickFn=null;
+const R=(p="")=>ref(db,"rooms/"+code+(p?"/"+p:""));
+const players=()=>Object.entries(S?.players||{}).map(([id,p])=>({id,...p}));
+const alivePlayers=()=>players().filter(p=>p.alive!==false);
+const meP=()=>S?.players?.[myId];
+const missions=(st=S)=>st?.missions||DEFAULT_MISSIONS;
+const setg=()=>({...DEFAULT_SETTINGS,...(S?.settings||{})});
+const doneCount=st=>missions(st).filter((_,i)=>st?.done?.[i]).length;
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+async function log(t){try{await set(R("log/"+now()+"_"+rid().slice(0,4)),{t,ts:now()})}catch{}}
+
+let toastT;function toast(m,warn=false){const t=$("#toast");t.textContent=m;t.classList.toggle("warn",warn);t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),3200)}
+const openOv=id=>$("#"+id).classList.add("show");
+const closeOv=id=>$("#"+id).classList.remove("show");
+
+// sons + vibrations
+let actx=null;
+document.addEventListener("pointerdown",()=>{try{actx??=new (window.AudioContext||window.webkitAudioContext)();actx.resume()}catch{}},{passive:true});
+function tones(seq,type="square",step=.2,vol=.12){if(!actx)return;try{const t0=actx.currentTime;seq.forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=f;o.connect(g);g.connect(actx.destination);const t=t0+i*step;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+step*.95);o.start(t);o.stop(t+step)})}catch{}}
+const sfx={ok:()=>tones([660,990],"sine",.12,.15),alarm:()=>tones([820,520,820,520,820,520],"square",.22),win:()=>tones([523,659,784,1047],"triangle",.2,.16),lose:()=>tones([392,330,262,196],"triangle",.3,.15),warn:()=>tones([220,180],"sawtooth",.3,.1)};
+const buzz=p=>{try{navigator.vibrate?.(p)}catch{}};
+
+// écran toujours allumé
+async function keepAwake(){try{if(document.visibilityState==="visible")await navigator.wakeLock?.request("screen")}catch{}}
+document.addEventListener("visibilitychange",()=>{if(code)keepAwake()});
+
+// ---------- salon ----------
+async function createRoom(){
+ let c="";
+ for(let k=0;k<10;k++){c=Array.from({length:4},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.random()*32|0]).join("");if(!(await get(ref(db,"rooms/"+c))).exists())break}
+ code=c;isHost=true;
+ await set(R(),{v:2,createdAt:now(),phase:"lobby",round:0,settings:DEFAULT_SETTINGS,missions:DEFAULT_MISSIONS,log:{a:{t:"🛸 Salon créé",ts:now()}}});
+ ls.set("noopix_session",{code,host:true});listen();
+}
+async function joinRoom(){
+ const msg=$("#homeMsg"),name=$("#inName").value.trim().slice(0,16),c=$("#inCode").value.trim().toUpperCase();
+ if(!name||c.length!==4){msg.textContent="⚠️ Entre ton prénom et le code à 4 caractères.";return}
+ msg.textContent="Connexion…";
+ try{
+  const snap=await get(ref(db,"rooms/"+c));
+  if(!snap.exists()){msg.textContent="❌ Salon "+c+" introuvable. Vérifie le code sur l'écran.";return}
+  const r=snap.val();
+  if(r.v!==2){msg.textContent="❌ Ce salon vient d'une ancienne version du jeu.";return}
+  const existing=r.players?.[myId];
+  if(!existing&&r.phase!=="lobby"){msg.textContent="❌ La partie a déjà commencé. Attends la prochaine manche.";return}
+  if(Object.entries(r.players||{}).some(([id,p])=>id!==myId&&p.name.toLowerCase()===name.toLowerCase())){msg.textContent="❌ Ce prénom est déjà pris, ajoute une initiale.";return}
+  code=c;isHost=false;
+  if(existing)await update(R("players/"+myId),{name});else{await set(R("players/"+myId),{name,alive:true});await log("👋 "+name+" a rejoint l'équipage")}
+  ls.set("noopix_name",name);ls.set("noopix_session",{code,host:false});msg.textContent="";listen();
+ }catch(e){console.error(e);msg.textContent="❌ Connexion impossible : "+(e?.message||"erreur réseau")}
+}
+function listen(){
+ unsub?.();
+ $("#scHome").classList.add("hidden");$(isHost?"#scHost":"#scPlayer").classList.remove("hidden");
+ $("#hDev").classList.toggle("hidden",!(DEV&&isHost));
+ keepAwake();
+ unsub=onValue(R(),snap=>{
+  const prev=S;S=snap.val();
+  if(!S){if(prev)goHome("⛔ Le salon a été fermé.");return}
+  if(!isHost&&!S.players?.[myId]){goHome("Tu as quitté le salon.");return}
+  onChange(prev);render();
+  if(isHost)hostTick();
+ });
+}
+function goHome(m=""){
+ unsub?.();unsub=null;ls.del("noopix_session");
+ ["ovRole","ovMeet","ovPick","ovDead","ovEnd"].forEach(closeOv);
+ code="";isHost=false;S=null;fakeDone={};endSeen=0;
+ $("#scHost").classList.add("hidden");$("#scPlayer").classList.add("hidden");$("#scHome").classList.remove("hidden");
+ $("#homeMsg").textContent=m;
+}
+
+// ---------- réactions aux changements ----------
+function onChange(prev){
+ const me=meP(),pm=prev?.players?.[myId];
+ if(prev&&prev.round!==S.round){fakeDone={};closeOv("ovDead");closeOv("ovEnd");hideSecret()}
+ if(!isHost&&me?.role&&S.phase!=="lobby"&&ls.get("noopix_seen_"+code)!==S.round){ls.set("noopix_seen_"+code,S.round);showRole()}
+ if(S.phase==="meeting"&&S.meeting&&S.meeting.id!==prev?.meeting?.id){closeOv("ovPick");closeOv("ovDead");hideSecret();openOv("ovMeet");sfx.alarm();buzz([300,120,300,120,500])}
+ if(prev&&S.meeting?.result&&!prev.meeting?.result){sfx.warn();buzz(200)}
+ if(!isHost&&prev&&prev.round===S.round&&pm&&pm.alive!==false&&me?.alive===false&&me.killedBy){openOv("ovDead");sfx.lose();buzz([600])}
+ if(prev&&S.lastSab?.id&&S.lastSab.id!==prev.lastSab?.id){toast("⚠️ SABOTAGE ! « "+(missions()[S.lastSab.i]?.name||"Une mission")+" » doit être refaite",true);sfx.warn();buzz([200,100,200])}
+ if(isHost&&prev&&prev.round===S.round&&doneCount(S)>doneCount(prev)){toast("✓ Mission validée !");sfx.ok()}
+ if(S.phase==="end"&&endSeen!==S.round){endSeen=S.round;setTimeout(showEnd,400)}
+}
+
+// ---------- rendu ----------
+function render(){
+ if(!S)return;
+ isHost?renderHost():renderPlayer();
+ if(S.phase==="meeting"&&S.meeting)renderMeeting();else closeOv("ovMeet");
+ if(S.phase!=="end")closeOv("ovEnd");
+}
+function progressInto(pctSel,barSel){const p=Math.round(doneCount(S)/missions().length*100);$(pctSel).textContent=p+"%";$(barSel).style.width=p+"%"}
+function scoresHTML(){
+ const sc=Object.values(S.scores||{}).sort((a,b)=>b.points-a.points||b.wins-a.wins);
+ return sc.length?sc.map((s,i)=>`<div class="chip" style="margin-bottom:6px"><span>${["🥇","🥈","🥉"][i]||"#"+(i+1)} ${esc(s.name)}</span><span class="muted">${s.points} pts • ${s.wins}/${s.games} victoire${s.wins>1?"s":""}</span></div>`).join(""):'<span class="muted">Le classement apparaîtra après la première manche.</span>';
+}
+function renderHost(){
+ const ph=S.phase,ps=players();
+ $("#hCode").textContent=code;
+ $("#hPhase").textContent={lobby:"Salon ouvert — en attente des joueurs",play:"Manche "+S.round+" en cours",meeting:"Réunion en cours",end:"Manche "+S.round+" terminée"}[ph]||"";
+ $("#hLobby").classList.toggle("hidden",ph!=="lobby");$("#hGame").classList.toggle("hidden",ph==="lobby");
+ if(ph==="lobby"){
+  $("#hCount").textContent=ps.length;
+  $("#hLobbyPlayers").innerHTML=ps.map(p=>`<div class="chip">${p.bot?"🤖":"👨‍🚀"} ${esc(p.name)}<button onclick="kick('${p.id}')" aria-label="Retirer">✕</button></div>`).join("")||'<span class="muted">Personne pour l\'instant</span>';
+  document.querySelectorAll("[data-set]").forEach(i=>{if(document.activeElement!==i)i.value=setg()[i.dataset.set]});
+  const ta=$("#hMissions");if(document.activeElement!==ta)ta.value=missions().map(m=>m.name+(m.desc?" : "+m.desc:"")).join("\n");
+  drawQR();
+ }else{
+  progressInto("#hPct","#hBar");
+  $("#hTasks").innerHTML=missions().map((m,i)=>`<div class="task ${S.done?.[i]?"done":""}"><b>${esc(m.name)}</b><span>${S.done?.[i]?"✅":"⬜"}</span></div>`).join("");
+  $("#hPlayers").innerHTML=ps.map(p=>{const dead=p.alive===false&&(p.reported||p.ejected);return `<div class="chip ${dead?"dead":""}">${dead?"💀":"👨‍🚀"} ${esc(p.name)}</div>`}).join("");
+ }
+ $("#hScores").innerHTML=scoresHTML();
+ $("#hLog").innerHTML=Object.values(S.log||{}).sort((a,b)=>b.ts-a.ts).slice(0,10).map(l=>esc(l.t)).join("<br>");
+ if(DEV)$("#hRoles").textContent=ps.filter(p=>p.role).map(p=>p.name+" = "+(p.role==="impostor"?"🔴":"🔵")+(p.alive===false?"💀":"")).join(" • ");
+}
+function drawQR(){
+ const url=location.origin+location.pathname+"?room="+code,box=$("#qr");
+ $("#joinUrl").textContent=url;
+ if(box.dataset.code===code||typeof QRCode==="undefined")return;
+ box.innerHTML="";new QRCode(box,{text:url,width:180,height:180,colorDark:"#070d14",colorLight:"#ffffff"});box.dataset.code=code;
+}
+function renderPlayer(){
+ const me=meP();if(!me)return;
+ const ph=S.phase,aliveMe=me.alive!==false,g=setg();
+ $("#pCode").textContent=code;$("#pName").textContent=me.name;
+ $("#pStatus").textContent=ph==="lobby"?"En attente":(aliveMe?"🟢 En vie":"👻 Fantôme");
+ $("#pLobby").classList.toggle("hidden",ph!=="lobby");$("#pGame").classList.toggle("hidden",ph==="lobby");
+ if(ph==="lobby"){$("#pLobbyPlayers").innerHTML=players().map(p=>`<div class="chip">${esc(p.name)}</div>`).join("");return}
+ progressInto("#pPct","#pBar");
+ const imp=me.role==="impostor",canTask=ph==="play"&&(aliveMe||!imp);
+ $("#pTasks").innerHTML=missions().map((m,i)=>{const d=!!S.done?.[i]||(imp&&fakeDone[i]);return `<div class="task ${d?"done":""}"><div><b>${esc(m.name)}</b><div class="muted">${esc(m.desc)}</div></div><button ${d||!canTask?"disabled":""} onclick="validate(${i})">${d?"FAIT ✓":"VALIDER"}</button></div>`}).join("");
+ const left=Math.max(0,g.emergencies-(me.emUsed||0));
+ $("#btnReport").disabled=!aliveMe||ph!=="play";
+ $("#btnEmergency").disabled=!aliveMe||ph!=="play"||left<=0;
+ $("#btnEmergency").textContent="🚨 RÉUNION D'URGENCE ("+left+")";
+ if(!$("#pSecret").classList.contains("hidden"))renderSecret();
+}
+
+// ---------- rôle & actions secrètes ----------
+function matesText(){const me=meP();if(me?.role!=="impostor")return"";const m=players().filter(p=>p.role==="impostor"&&p.id!==myId).map(p=>p.name);return m.length?"Complice"+(m.length>1?"s":"")+" : "+m.join(", "):""}
+function showRole(){
+ const me=meP(),imp=me.role==="impostor";
+ $("#roleHidden").classList.remove("hidden");$("#roleShown").classList.add("hidden");
+ $("#roleIcon").textContent=imp?"🔪":"👨‍🚀";
+ $("#roleName").textContent=imp?"IMPOSTEUR":"CREWMATE";$("#roleName").className=imp?"role-imp":"role-crew";
+ $("#roleText").textContent=imp?"Élimine l'équipage sans te faire griller. Fais semblant de faire tes missions !":"Fais les missions en vrai et démasque les imposteurs.";
+ $("#roleMates").textContent=matesText();
+ openOv("ovRole");buzz(200);
+}
+function revealRole(){$("#roleHidden").classList.add("hidden");$("#roleShown").classList.remove("hidden")}
+function cdLeft(key,sec){const me=meP();const base=Math.max(me?.[key]||0,S?.startedAt||0,S?.meetingEndedAt||0);return Math.max(0,Math.ceil((base+(sec||0)*1000-now())/1000))}
+function hideSecret(){$("#pSecret").classList.add("hidden");clearTimeout(secretTimer)}
+function toggleSecret(){const el=$("#pSecret");if(!el.classList.contains("hidden")){hideSecret();return}renderSecret();el.classList.remove("hidden");clearTimeout(secretTimer);secretTimer=setTimeout(hideSecret,15000)}
+function renderSecret(){
+ const me=meP(),el=$("#pSecret"),g=setg();
+ if(!me?.role){el.innerHTML='<p class="muted">La partie n\'a pas encore commencé.</p>';return}
+ if(me.role!=="impostor"){el.innerHTML='<h2 class="role-crew">🔵 CREWMATE</h2><p class="muted">Fais les missions et démasque les imposteurs. Pas d\'action secrète pour toi.</p><button class="wide mt" onclick="hideSecret()">CACHER</button>';return}
+ let h=`<h2 class="role-imp">🔴 IMPOSTEUR</h2><p class="muted">${esc(matesText())}</p>`;
+ if(me.alive===false||S.phase!=="play")h+=`<p class="muted">${me.alive===false?"👻 Tu es éliminé, plus d'action possible.":"Actions disponibles pendant la partie."}</p>`;
+ else{
+  const kc=cdLeft("lastKillAt",g.killCd),sc=cdLeft("lastSabAt",g.sabCd);
+  h+=`<button id="btnKill" class="red big wide mt" ${kc?"disabled":""} onclick="openKill()">☠️ J'AI ÉLIMINÉ QUELQU'UN<span id="kcTxt">${kc?" ("+kc+" s)":""}</span></button>`;
+  const sab=missions().map((m,i)=>S.done?.[i]?`<button class="red sabBtn" ${sc?"disabled":""} onclick="sabotage(${i})">💥 ${esc(m.name)}</button>`:"").join("");
+  h+=`<p class="muted mt">Saboter une mission déjà faite<span id="scTxt">${sc?" (dispo dans "+sc+" s)":""}</span> :</p><div class="grid">${sab||'<span class="muted">Rien à saboter pour l\'instant.</span>'}</div>`;
+ }
+ el.innerHTML=h+'<button class="wide mt" onclick="hideSecret()">CACHER</button>';
+}
+function openPicker(title,emptyMsg,items,fn){
+ if(!items.length){toast(emptyMsg,true);return}
+ $("#pkTitle").textContent=title;pickFn=fn;
+ $("#pkList").innerHTML=items.map(p=>`<button onclick="pick('${p.id}')">${esc(p.name)}</button>`).join("");openOv("ovPick");
+}
+function pick(id){closeOv("ovPick");const f=pickFn;pickFn=null;f?.(id)}
+
+// ---------- actions joueur ----------
+async function validate(i){
+ const me=meP();if(!me||S.phase!=="play"||S.done?.[i])return;
+ if(me.role==="impostor"){if(me.alive===false)return;fakeDone[i]=true;renderPlayer();toast("✓ "+missions()[i].name+" — validée !");sfx.ok();return}
+ await set(R("done/"+i),true);await log("✓ « "+missions()[i].name+" » validée");
+ toast("✓ "+missions()[i].name+" — validée !");sfx.ok();
+}
+async function sabotage(i){
+ const me=meP();if(me?.role!=="impostor"||me.alive===false||S.phase!=="play"||!S.done?.[i]||cdLeft("lastSabAt",setg().sabCd))return;
+ await update(R(),{["done/"+i]:false,lastSab:{id:rid(),i},["players/"+myId+"/lastSabAt"]:now()});
+ await log("⚠️ Sabotage : « "+missions()[i].name+" » doit être refaite");hideSecret();
+}
+function openKill(){
+ const me=meP();if(me?.role!=="impostor"||me.alive===false||S.phase!=="play"||cdLeft("lastKillAt",setg().killCd))return;
+ openPicker("☠️ Qui as-tu éliminé ?","ℹ️ Plus personne à éliminer.",alivePlayers().filter(p=>p.role!=="impostor"),async id=>{
+  const t=S.players[id];if(!t||t.alive===false||S.phase!=="play")return;
+  await update(R(),{["players/"+id+"/alive"]:false,["players/"+id+"/killedBy"]:myId,["players/"+id+"/deadAt"]:now(),["players/"+myId+"/lastKillAt"]:now()});
+  hideSecret();toast("☠️ "+t.name+" est éliminé. Éloigne-toi l'air de rien…");
+ });
+}
+function report(){
+ const me=meP();if(!me||me.alive===false||S.phase!=="play")return;
+ const bodies=players().filter(p=>p.alive===false&&p.killedBy&&!p.reported);
+ openPicker("💀 Quel corps as-tu trouvé ?","ℹ️ Aucun corps à signaler pour l'instant.",bodies,id=>startMeeting("body",S.players[id]));
+}
+function emergency(){
+ const me=meP();if(!me||me.alive===false||S.phase!=="play")return;
+ if((me.emUsed||0)>=setg().emergencies){toast("Tu as déjà utilisé ta réunion d'urgence.",true);return}
+ if(confirm("Convoquer une réunion d'urgence ?"))startMeeting("emergency");
+}
+async function startMeeting(type,body=null){
+ const me=meP();if(S.phase!=="play"||!me)return;
+ const up={phase:"meeting",meeting:{id:rid(),type,by:me.name,body:body?.name||null,startedAt:now(),endsAt:now()+setg().meetingSec*1000}};
+ players().forEach(p=>{if(p.alive===false&&p.killedBy&&!p.reported)up["players/"+p.id+"/reported"]=true});
+ if(type==="emergency")up["players/"+myId+"/emUsed"]=(me.emUsed||0)+1;
+ await update(R(),up);
+ await log(type==="body"?"💀 "+me.name+" a trouvé le corps de "+body.name:"🚨 "+me.name+" a convoqué une réunion d'urgence");
+}
+async function castVote(t){
+ const me=meP(),m=S.meeting;if(!me||me.alive===false||!m||m.result||m.votes?.[myId])return;
+ await set(R("meeting/votes/"+myId),t);
+}
+async function leave(){
+ if(!confirm("Quitter la partie ?"))return;
+ try{await set(R("players/"+myId),null)}catch{}
+ goHome("Tu as quitté la partie.");
+}
+
+// ---------- réunion ----------
+function renderMeeting(){
+ const m=S.meeting,me=meP(),al=alivePlayers(),votes=m.votes||{};
+ $("#mTitle").textContent=m.type==="body"?"CORPS SIGNALÉ":"RÉUNION D'URGENCE";
+ $("#mSub").textContent=m.type==="body"?"💀 "+m.body+" a été retrouvé mort • signalé par "+m.by:"📢 "+m.by+" a convoqué une réunion";
+ $("#mForce").classList.toggle("hidden",!isHost||!!m.result);
+ if(m.result){
+  const r=m.result;$("#mTimer").textContent="";$("#mVotes").innerHTML="";
+  $("#mStatus").textContent="Retour au jeu dans quelques secondes…";
+  $("#mResult").innerHTML=`<h2>${r.ejected?"🚀 "+esc(r.name)+" est éjecté… "+(r.role==="impostor"?'<span class="role-imp">C\'ÉTAIT UN IMPOSTEUR</span>':'<span class="role-crew">c\'était un crewmate</span>'):(r.tie?"⚖️ Égalité : personne n'est éjecté":"⏭️ Personne n'est éjecté")}</h2><div class="muted">${(r.tally||[]).map(t=>esc(t.name)+" : "+t.c).join(" • ")}</div>`;
+  return;
+ }
+ $("#mResult").innerHTML="";
+ const n=al.filter(p=>votes[p.id]).length;
+ if(isHost||!me){$("#mStatus").textContent="Discutez, puis votez sur vos téléphones • "+n+"/"+al.length+" votes";$("#mVotes").innerHTML="";return}
+ if(me.alive===false){$("#mStatus").textContent="👻 Les fantômes ne votent pas… et ne parlent pas 🤐 • "+n+"/"+al.length;$("#mVotes").innerHTML="";return}
+ if(votes[myId]){const t=votes[myId];$("#mStatus").textContent="✅ Vote enregistré ("+(t==="skip"?"passer":S.players[t]?.name||"?")+") • "+n+"/"+al.length;$("#mVotes").innerHTML="";return}
+ $("#mStatus").textContent="Qui est l'imposteur ? • "+n+"/"+al.length+" votes";
+ $("#mVotes").innerHTML=al.map(p=>`<button onclick="castVote('${p.id}')">🗳️ ${esc(p.name)}${p.id===myId?" (moi)":""}</button>`).join("")+'<button onclick="castVote(\'skip\')">⏭️ PASSER</button>';
+}
+
+// ---------- logique console (arbitre) ----------
+function computeWinner(st){
+ if(!st||st.phase==="lobby")return null;
+ const ps=Object.values(st.players||{}),imps=ps.filter(p=>p.role==="impostor"),crew=ps.filter(p=>p.role==="crewmate");
+ if(!imps.length)return null;
+ if(doneCount(st)>=missions(st).length)return{winner:"crew",reason:"Toutes les missions sont terminées"};
+ const ai=imps.filter(p=>p.alive!==false).length,ac=crew.filter(p=>p.alive!==false).length;
+ if(ai===0)return{winner:"crew",reason:"Tous les imposteurs ont été éjectés"};
+ if(ai>=ac)return{winner:"impostor",reason:"Les imposteurs sont aussi nombreux que l'équipage"};
+ return null;
+}
+async function hostTick(){
+ if(!isHost||!S||hostBusy)return;hostBusy=true;
+ try{
+  if(S.phase==="meeting"&&S.meeting){
+   const m=S.meeting,al=alivePlayers(),votes=m.votes||{};
+   if(!m.result){
+    if(DEV){const up={};al.forEach(p=>{if(p.bot&&!votes[p.id]&&now()>m.startedAt+3000){const opts=[...al.map(x=>x.id),"skip"];up["meeting/votes/"+p.id]=opts[Math.random()*opts.length|0]}});if(Object.keys(up).length){await update(R(),up);return}}
+    if(al.every(p=>votes[p.id])||now()>=m.endsAt)await resolveVote();
+   }else if(now()>=m.result.at+8000){
+    const w=computeWinner(S);
+    if(w)await endGame(w);else await update(R(),{phase:"play",meetingEndedAt:now()});
+   }
+  }else if(S.phase==="play"){const w=computeWinner(S);if(w)await endGame(w)}
+ }catch(e){console.error(e)}finally{hostBusy=false}
+}
+async function resolveVote(){
+ const m=S.meeting;if(!m||m.result)return;
+ const ids=new Set(alivePlayers().map(p=>p.id)),counts={};
+ Object.entries(m.votes||{}).forEach(([v,t])=>{if(ids.has(v))counts[t]=(counts[t]||0)+1});
+ const ranked=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+ let target=null,tie=false;
+ if(ranked.length){tie=ranked.length>1&&ranked[0][1]===ranked[1][1];if(!tie&&ranked[0][0]!=="skip")target=ranked[0][0]}
+ const res={at:now(),tie,ejected:false,tally:ranked.map(([t,c])=>({name:t==="skip"?"Passer":S.players[t]?.name||"?",c}))};
+ const up={};
+ if(target&&S.players[target]){const p=S.players[target];Object.assign(res,{ejected:true,name:p.name,role:p.role});up["players/"+target+"/alive"]=false;up["players/"+target+"/ejected"]=true}
+ up["meeting/result"]=res;await update(R(),up);
+ await log(res.ejected?"🚀 "+res.name+" éjecté — "+(res.role==="impostor"?"c'était un IMPOSTEUR":"c'était un crewmate"):(tie?"⚖️ Égalité, personne n'est éjecté":"⏭️ Personne n'est éjecté"));
+}
+async function forceVote(){if(isHost&&confirm("Clôturer le vote maintenant ? Ceux qui n'ont pas voté seront ignorés."))await resolveVote()}
+async function endGame(w){
+ if(S.phase==="end")return;
+ const ps=players(),up={phase:"end",result:{...w,impostors:ps.filter(p=>p.role==="impostor").map(p=>p.name),at:now()}};
+ ps.forEach(p=>{if(p.bot||!p.role)return;const o=S.scores?.[p.id]||{};const won=(w.winner==="crew")===(p.role!=="impostor");up["scores/"+p.id]={name:p.name,points:(o.points||0)+(won?3:0),wins:(o.wins||0)+(won?1:0),games:(o.games||0)+1}});
+ await update(R(),up);await log(w.winner==="crew"?"🏆 Victoire de l'équipage !":"🏆 Victoire des imposteurs !");
+}
+function showEnd(){
+ const r=S?.result;if(!r)return;
+ const me=meP(),crewWin=r.winner==="crew",won=isHost?crewWin:((me?.role==="impostor")!==crewWin);
+ $("#ovEnd").className="ov "+(won?"greenbg":"redbg");
+ $("#eIcon").textContent=isHost?(crewWin?"🚀":"🔪"):(won?"🏆":"💀");
+ $("#eTitle").textContent=isHost?(crewWin?"VICTOIRE DE L'ÉQUIPAGE":"VICTOIRE DES IMPOSTEURS"):(won?"VICTOIRE !":"DÉFAITE…");
+ $("#eReason").textContent=(isHost?"":(crewWin?"L'équipage gagne • ":"Les imposteurs gagnent • "))+r.reason;
+ $("#eImps").textContent=r.impostors?.length?"Imposteur"+(r.impostors.length>1?"s":"")+" : "+r.impostors.join(", "):"";
+ $("#eScores").innerHTML=scoresHTML();
+ $("#eHost").classList.toggle("hidden",!isHost);
+ openOv("ovEnd");(won?sfx.win:sfx.lose)();buzz(won?[200,100,200]:[600]);
+}
+async function startRound(){
+ if(!isHost)return;
+ const ps=players(),n=ps.length,k=setg().impostors;
+ if(n<3){toast("⚠️ Il faut au moins 3 joueurs.",true);return}
+ if(n-k<=k){toast("⚠️ Trop d'imposteurs pour "+n+" joueurs.",true);return}
+ if(S.phase!=="lobby"&&S.phase!=="end"&&!confirm("Arrêter la manche en cours et en relancer une ?"))return;
+ const imps=new Set(shuffle(ps.map(p=>p.id)).slice(0,k)),round=(S.round||0)+1;
+ const up={phase:"play",round,startedAt:now(),meetingEndedAt:0,done:null,meeting:null,result:null,lastSab:null};
+ ps.forEach(p=>up["players/"+p.id]={name:p.name,alive:true,role:imps.has(p.id)?"impostor":"crewmate",...(p.bot?{bot:true}:{})});
+ await update(R(),up);closeOv("ovEnd");await log("🚀 Manche "+round+" lancée ! "+k+" imposteur"+(k>1?"s":"")+" parmi vous…");
+}
+async function toLobby(){
+ if(!isHost)return;
+ const up={phase:"lobby",done:null,meeting:null,result:null,lastSab:null};
+ players().forEach(p=>up["players/"+p.id]={name:p.name,alive:true,...(p.bot?{bot:true}:{})});
+ await update(R(),up);closeOv("ovEnd");
+}
+async function kick(id){if(isHost&&S.phase==="lobby")await set(R("players/"+id),null)}
+async function closeRoom(){if(isHost&&confirm("Fermer le salon pour tout le monde ?")){await set(R(),null);goHome("Salon fermé.")}}
+
+// réglages + missions (console)
+document.querySelectorAll("[data-set]").forEach(i=>i.addEventListener("change",()=>{const v=Math.max(+i.min,Math.min(+i.max,parseInt(i.value)||0));i.value=v;update(R("settings"),{[i.dataset.set]:v})}));
+$("#hMissions").addEventListener("change",()=>{
+ const ms=$("#hMissions").value.split("\n").map(l=>l.trim()).filter(Boolean).slice(0,15).map(l=>{const k=l.indexOf(":");return k>0?{name:l.slice(0,k).trim(),desc:l.slice(k+1).trim()}:{name:l,desc:""}});
+ if(ms.length){set(R("missions"),ms);toast("✓ Missions enregistrées")}
+});
+
+// ---------- mode test (?dev) ----------
+async function devBots(){if(S.phase!=="lobby")return;const up={},c=players().length;for(let i=1;i<=3;i++)up["players/bot_"+rid().slice(0,5)]={name:"Bot "+(c+i),alive:true,bot:true};await update(R(),up)}
+async function devClear(){if(S.phase!=="lobby")return;const up={};players().forEach(p=>{if(p.bot)up["players/"+p.id]=null});await update(R(),up)}
+async function devKill(){if(S.phase!=="play")return;const v=alivePlayers().filter(p=>p.role==="crewmate");if(!v.length)return;const p=v[Math.random()*v.length|0];await update(R(),{["players/"+p.id+"/alive"]:false,["players/"+p.id+"/killedBy"]:"dev",["players/"+p.id+"/deadAt"]:now()});toast("☠️ TEST : "+p.name+" tué")}
+async function devTask(){if(S.phase!=="play")return;const i=missions().findIndex((_,k)=>!S.done?.[k]);if(i>=0)await set(R("done/"+i),true)}
+
+// ---------- boucle 1 s ----------
+setInterval(()=>{
+ if(!S)return;
+ if(S.phase==="meeting"&&S.meeting&&!S.meeting.result){const s=Math.max(0,Math.ceil((S.meeting.endsAt-now())/1000));$("#mTimer").textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+ const me=meP();
+ if(me?.role==="impostor"&&!$("#pSecret").classList.contains("hidden")&&S.phase==="play"){
+  const g=setg(),kc=cdLeft("lastKillAt",g.killCd),sc=cdLeft("lastSabAt",g.sabCd);
+  const kb=$("#btnKill");if(kb){kb.disabled=!!kc;$("#kcTxt").textContent=kc?" ("+kc+" s)":""}
+  document.querySelectorAll(".sabBtn").forEach(b=>b.disabled=!!sc);const st=$("#scTxt");if(st)st.textContent=sc?" (dispo dans "+sc+" s)":"";
+ }
+ if(isHost)hostTick();
+},1000);
+
+Object.assign(window,{createRoom,joinRoom,closeOv,revealRole,toggleSecret,hideSecret,openKill,sabotage,validate,report,emergency,castVote,pick,leave,forceVote,startRound,toLobby,kick,closeRoom,devBots,devClear,devKill,devTask});
+
+// ---------- démarrage / reprise de session ----------
+(async()=>{
+ const rc=new URLSearchParams(location.search).get("room");if(rc)$("#inCode").value=rc.toUpperCase().slice(0,4);
+ $("#inName").value=ls.get("noopix_name","");
+ const s=ls.get("noopix_session");if(!s?.code)return;
+ try{
+  const snap=await get(ref(db,"rooms/"+s.code));
+  if(!snap.exists()||snap.val().v!==2||(!s.host&&!snap.val().players?.[myId])){ls.del("noopix_session");return}
+  code=s.code;isHost=!!s.host;listen();
+ }catch(e){console.error(e)}
+})();
+</script>
+</body>
+</html>
